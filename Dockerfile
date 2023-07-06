@@ -3,7 +3,7 @@ FROM golang:1.20-alpine AS build
 WORKDIR /src/
 COPY . .
 RUN go mod download
-RUN CGO_ENABLED=0 go install main.go
+RUN CGO_ENABLED=0 go install .
 
 ARG USERNAME
 ARG USER_UID
