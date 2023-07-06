@@ -67,7 +67,7 @@ func (ur UserRepository) countAll(f *Filter) (int, error) {
 	return n, nil
 }
 
-// All get User collection.
+// All get all Users filterd per page and limit.
 func (ur UserRepository) All(f *Filter) (FilteredResults, error) {
 	query := "SELECT * FROM users WHERE deleted_at IS NULL"
 	query += " " + fmt.Sprintf("ORDER BY %s %s", f.Sort, f.Direction)
