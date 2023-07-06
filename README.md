@@ -30,3 +30,36 @@ exit
 ```
 docker-compose up -d --build app
 ```
+
+## Endpoints:
+
+**POST:** `/v1/signup`
+
+Sing up users or create account. *First Name, Email and Password are fields required.*
+
+Body (JSON):
+
+```json
+{
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "jdoe@go.com",
+    "password": "1234567b"
+}
+```
+
+Reponse (201 Created):
+
+```json
+{
+    "message_ok": {
+        "content": "user created"
+    },
+    "data": {
+        "id": 11,
+        "uuid": "def4eae8-7bf0-4102-9ba8-45fbccbd365e",
+        "name": "Becky",
+        "created": "2023-07-06T01:09:39.98926674-04:00"
+    }
+}
+```
