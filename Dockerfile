@@ -13,8 +13,6 @@ RUN addgroup -g ${USER_GID} -S ${USERNAME} \
 
 FROM scratch
 
-COPY app.sra .
-COPY app.sra.pub .
 COPY --from=build /go/bin/aurora /bin/aurora
 USER ${USERNAME}
 ENTRYPOINT ["/bin/aurora"]
