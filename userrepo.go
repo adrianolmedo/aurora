@@ -1,0 +1,192 @@
+package main
+
+import (
+	"database/sql"
+	"errors"
+	"time"
+)
+
+type UserRepository struct {
+	db *sql.DB
+}
+
+// Create a User to the storage.
+func (ur UserRepository) Create(u *User) error {
+	stmt, err := ur.db.Prepare("INSERT INTO users (uuid, name, created_at) VALUES ($1, $2, $3) RETURNING id")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	u.UUID = NextUUID()
+	u.CreatedAt = time.Now()
+
+	err = stmt.QueryRow(u.UUID, u.Name, u.CreatedAt).Scan(&u.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ByID get a User from its id.
+func (ur UserRepository) ByID(id int) (*User, error) {
+	stmt, err := ur.db.Prepare("SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	u, err := scanRowUser(stmt.QueryRow(id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return &User{}, ErrUserNotFound
+	}
+
+	if err != nil {
+		return &User{}, err
+	}
+
+	return u, nil
+}
+
+// All get User collection.
+func (ur UserRepository) All() ([]*User, error) {
+	stmt, err := ur.db.Prepare("SELECT * FROM users WHERE deleted_at IS NULL")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]*User, 0)
+
+	for rows.Next() {
+		u, err := scanRowUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+// Update update User.
+func (ur UserRepository) Update(u User) error {
+	stmt, err := ur.db.Prepare("UPDATE users SET name = $1, updated_at = $2 WHERE id = $3")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	u.UpdatedAt = time.Now()
+
+	result, err := stmt.Exec(u.Name, timeToNull(u.UpdatedAt), u.ID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
+// Delete is not hard delete, the User is only marked as deleted.
+func (ur UserRepository) Delete(id int) error {
+	stmt, err := ur.db.Prepare("UPDATE users SET deleted_at = $1 WHERE id = $2")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(time.Now(), id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
+/*func (ur UserRepository) Delete(id int64) error {
+	stmt, err := ur.db.Prepare("DELETE FROM users WHERE id = $1")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}*/
+
+type scanner interface {
+	Scan(dest ...interface{}) error
+}
+
+// scanRowUser return nulled fields of the domain object User parsed.
+func scanRowUser(s scanner) (*User, error) {
+	var updatedAtNull, deletedAtNull sql.NullTime
+	m := &User{}
+
+	err := s.Scan(
+		&m.ID,
+		&m.UUID,
+		&m.Name,
+		&m.CreatedAt,
+		&updatedAtNull,
+		&deletedAtNull,
+	)
+	if err != nil {
+		return &User{}, err
+	}
+
+	m.UpdatedAt = updatedAtNull.Time
+	m.DeletedAt = deletedAtNull.Time
+
+	return m, nil
+}
+
+// timeToNull helper to try empty time fields.
+func timeToNull(t time.Time) sql.NullTime {
+	null := sql.NullTime{Time: t}
+
+	if !null.Time.IsZero() {
+		null.Valid = true
+	}
+	return null
+}
