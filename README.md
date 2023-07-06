@@ -5,9 +5,9 @@ Golang RESTfull API for test.
 ## Test with Postgres service:
 
 ```bash
-$ git clone https://github.com/adrianolmedo/aurora.git
-$ cp .env.example .env
-$ docker-compose up -d --build postgres
+git clone https://github.com/adrianolmedo/aurora.git
+cp .env.example .env
+docker-compose up -d --build postgres
 ```
 
 **Join to `psql` and ingress the password `1234567a`:**
@@ -20,7 +20,13 @@ $ psql -U adrian -d aurora
 **Install tables:**
 
 ```bash
-$ \i tables.sql
-$ \q
-$ exit
+\i tables.sql
+\q
+exit
+```
+
+**Start:**
+
+```
+docker-compose up -d --build app
 ```
