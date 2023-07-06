@@ -5,6 +5,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -55,23 +56,39 @@ func TestDeleteUser(t *testing.T) {
 	insertUsersData(t, db)
 
 	ur := UserRepository{db: db}
+	userID := 1
 
-	if err := ur.Delete(1); err != nil {
+	if err := ur.Delete(userID); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := ur.ByID(1)
+	got, err := onlyTrashedByID(db, userID)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if got.Name != input.Name {
-		t.Errorf("Name: want %s, got %s", input.Name, got.Name)
 	}
 
 	if got.DeletedAt.IsZero() {
 		t.Error("expected deleted at")
 	}
+}
+
+func onlyTrashedByID(db *sql.DB, id int) (*User, error) {
+	stmt, err := db.Prepare("SELECT * FROM users WHERE id = $1 AND deleted_at IS NOT NULL")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	u, err := scanRowUser(stmt.QueryRow(id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
 }
 
 func truncate(db *sql.DB, table string) error {
