@@ -50,7 +50,7 @@ func (ur UserRepository) ByID(id int) (*User, error) {
 	return u, nil
 }
 
-// countAll return total of Customers in storage.
+// countAll return total of Users in storage.
 func (ur UserRepository) countAll(f *Filter) (int, error) {
 	stmt, err := ur.db.Prepare("SELECT COUNT (*) FROM users WHERE deleted_at IS NULL")
 	if err != nil {
