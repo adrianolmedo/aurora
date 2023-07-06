@@ -33,18 +33,13 @@ docker-compose up -d --build app
 
 ## Endpoints:
 
-**POST:** `/v1/signup`
-
-Sing up users or create account. *First Name, Email and Password are fields required.*
+**POST:** `/v1/users`
 
 Body (JSON):
 
 ```json
 {
-    "first_name": "John",
-    "last_name": "Doe",
-    "email": "jdoe@go.com",
-    "password": "1234567b"
+    "name": "Becky"
 }
 ```
 
