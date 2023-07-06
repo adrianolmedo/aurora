@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -49,64 +50,64 @@ func (ur UserRepository) ByID(id int) (*User, error) {
 	return u, nil
 }
 
-// All get User collection.
-func (ur UserRepository) All() ([]*User, error) {
-	stmt, err := ur.db.Prepare("SELECT * FROM users WHERE deleted_at IS NULL")
+// countAll return total of Customers in storage.
+func (ur UserRepository) countAll(f *Filter) (int, error) {
+	stmt, err := ur.db.Prepare("SELECT COUNT (*) FROM users WHERE deleted_at IS NULL")
 	if err != nil {
-		return nil, err
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var n int
+	err = stmt.QueryRow().Scan(&n)
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+// All get User collection.
+func (ur UserRepository) All(f *Filter) (FilteredResults, error) {
+	query := "SELECT * FROM users WHERE deleted_at IS NULL"
+	query += " " + fmt.Sprintf("ORDER BY %s %s", f.Sort, f.Direction)
+	query += " " + limitOffset(f.Limit, f.Page)
+
+	stmt, err := ur.db.Prepare(query)
+	if err != nil {
+		return FilteredResults{}, err
 	}
 	defer stmt.Close()
 
 	rows, err := stmt.Query()
 	if err != nil {
-		return nil, err
+		return FilteredResults{}, err
 	}
 	defer rows.Close()
 
-	users := make([]*User, 0)
+	users := make(Users, 0)
 
 	for rows.Next() {
 		u, err := scanRowUser(rows)
 		if err != nil {
-			return nil, err
+			return FilteredResults{}, err
 		}
 		users = append(users, u)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return FilteredResults{}, err
 	}
 
-	return users, nil
+	// Get total rows to calculate total pages.
+	totalRows, err := ur.countAll(f)
+	if err != nil {
+		return FilteredResults{}, err
+	}
+
+	return f.Paginate(users, totalRows), nil
 }
 
-// Update update User.
-func (ur UserRepository) Update(u User) error {
-	stmt, err := ur.db.Prepare("UPDATE users SET name = $1, updated_at = $2 WHERE id = $3")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	u.UpdatedAt = time.Now()
-
-	result, err := stmt.Exec(u.Name, timeToNull(u.UpdatedAt), u.ID)
-	if err != nil {
-		return err
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rows == 0 {
-		return ErrUserNotFound
-	}
-
-	return nil
-}
-
-// Delete is not hard delete, the User is only marked as deleted.
+// Delete soft deleted by User ID.
 func (ur UserRepository) Delete(id int) error {
 	stmt, err := ur.db.Prepare("UPDATE users SET deleted_at = $1 WHERE id = $2")
 	if err != nil {
@@ -130,29 +131,6 @@ func (ur UserRepository) Delete(id int) error {
 
 	return nil
 }
-
-/*func (ur UserRepository) Delete(id int64) error {
-	stmt, err := ur.db.Prepare("DELETE FROM users WHERE id = $1")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	result, err := stmt.Exec(id)
-	if err != nil {
-		return err
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rows == 0 {
-		return ErrUserNotFound
-	}
-	return nil
-}*/
 
 type scanner interface {
 	Scan(dest ...interface{}) error
@@ -189,4 +167,14 @@ func timeToNull(t time.Time) sql.NullTime {
 		null.Valid = true
 	}
 	return null
+}
+
+// limitOffset returns a SQL string for a given limit & offset.
+func limitOffset(limit, page int) string {
+	if limit == 0 && page == 0 {
+		return ""
+	}
+
+	offset := page*limit - limit
+	return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
 }

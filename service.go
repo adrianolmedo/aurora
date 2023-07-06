@@ -38,8 +38,8 @@ func signUp(u *User) error {
 }
 
 // List get list of Users.
-func (us UserService) List() (Users, error) {
-	return us.repo.All()
+func (us UserService) List(f *Filter) (FilteredResults, error) {
+	return us.repo.All(f)
 }
 
 // Find a User by its ID.

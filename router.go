@@ -41,12 +41,42 @@ func signUpUser(s *Service) fiber.Handler {
 	}
 }
 
+func getFilter(c *fiber.Ctx) (*Filter, error) {
+	f := NewFilter(10)
+
+	err := f.SetLimit(c.QueryInt("limit"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = f.SetPage(c.QueryInt("page"))
+	if err != nil {
+		return nil, err
+	}
+
+	f.SetSort(c.Query("sort", "created_at"))
+	f.SetDirection(c.Query("direction"))
+	return f, nil
+}
+
 // listUsers handler GET: /users
 func listUsers(s *Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		users, err := s.User.List()
+		f, err := getFilter(c)
 		if err != nil {
-			resp := respJSON(msgError, "", nil)
+			resp := respJSON(msgError, err.Error(), nil)
+			return c.Status(http.StatusBadRequest).JSON(resp) // 400
+		}
+
+		fr, err := s.User.List(f)
+		if err != nil {
+			resp := respJSON(msgError, err.Error(), nil)
+			return c.Status(http.StatusInternalServerError).JSON(resp)
+		}
+
+		users, ok := fr.Rows.(Users)
+		if !ok {
+			resp := respJSON(msgError, "error in data assertion", nil)
 			return c.Status(http.StatusInternalServerError).JSON(resp)
 		}
 
@@ -55,8 +85,9 @@ func listUsers(s *Service) fiber.Handler {
 			return c.Status(http.StatusOK).JSON(resp)
 		}
 
-		resp := respJSON(msgOK, "", users)
-		return c.Status(http.StatusCreated).JSON(resp)
+		ls := f.GenLinksResp(c.Path(), fr.TotalPages)
+		resp := respJSON(msgOK, "", users).setLinks(ls).setMeta(fr)
+		return c.Status(http.StatusOK).JSON(resp)
 	}
 }
 
@@ -107,6 +138,6 @@ func deleteUser(s *Service) fiber.Handler {
 		}
 
 		resp := respJSON(msgOK, "user deleted", nil)
-		return c.Status(http.StatusCreated).JSON(resp)
+		return c.Status(http.StatusOK).JSON(resp)
 	}
 }

@@ -45,7 +45,7 @@ func TestCreateUser(t *testing.T) {
 	}
 }
 
-func TestUpdateUser(t *testing.T) {
+func TestDeleteUser(t *testing.T) {
 	t.Cleanup(func() {
 		cleanUsersData(t)
 	})
@@ -54,18 +54,13 @@ func TestUpdateUser(t *testing.T) {
 	defer closeDB(t, db)
 	insertUsersData(t, db)
 
-	input := User{
-		ID:   1,
-		Name: "Adrián",
-	}
-
 	ur := UserRepository{db: db}
 
-	if err := ur.Update(input); err != nil {
+	if err := ur.Delete(1); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := ur.ByID(input.ID)
+	got, err := ur.ByID(1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,16 +69,8 @@ func TestUpdateUser(t *testing.T) {
 		t.Errorf("Name: want %s, got %s", input.Name, got.Name)
 	}
 
-	if got.CreatedAt.IsZero() {
-		t.Error("expected created at")
-	}
-
-	if got.UpdatedAt.IsZero() {
-		t.Error("expected updated at")
-	}
-
-	if !got.DeletedAt.IsZero() {
-		t.Error("unexpected deleted at")
+	if got.DeletedAt.IsZero() {
+		t.Error("expected deleted at")
 	}
 }
 
