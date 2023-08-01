@@ -43,7 +43,6 @@ type Filter struct {
 
 // NewFilter return Filter pointer with maxLimit by default value as param.
 func NewFilter(maxLimit int) *Filter {
-
 	if maxLimit == 0 {
 		maxLimit = 10
 	}
