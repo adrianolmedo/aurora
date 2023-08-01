@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	//config "github.com/adrianolmedo/genesis"
-
 	// blank import to init postgres library.
 	_ "github.com/lib/pq"
 )
