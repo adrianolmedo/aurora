@@ -32,7 +32,7 @@ func (ur UserRepository) Create(u *User) error {
 
 // ByID get a User from its id.
 func (ur UserRepository) ByID(id int) (*User, error) {
-	stmt, err := ur.db.Prepare("SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL")
+	stmt, err := ur.db.Prepare("SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NULL")
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (ur UserRepository) countAll(f *Filter) (int, error) {
 
 // All get all Users filterd per page and limit.
 func (ur UserRepository) All(f *Filter) (FilteredResults, error) {
-	query := "SELECT * FROM users WHERE deleted_at IS NULL"
+	query := "SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL"
 	query += " " + fmt.Sprintf("ORDER BY %s %s", f.Sort, f.Direction)
 	query += " " + limitOffset(f.Limit, f.Page)
 
