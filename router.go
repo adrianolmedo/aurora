@@ -41,24 +41,6 @@ func signUpUser(s *Service) fiber.Handler {
 	}
 }
 
-func getFilter(c *fiber.Ctx) (*Filter, error) {
-	f := NewFilter(10)
-
-	err := f.SetLimit(c.QueryInt("limit"))
-	if err != nil {
-		return nil, err
-	}
-
-	err = f.SetPage(c.QueryInt("page"))
-	if err != nil {
-		return nil, err
-	}
-
-	f.SetSort(c.Query("sort", "created_at"))
-	f.SetDirection(c.Query("direction"))
-	return f, nil
-}
-
 // listUsers handler GET: /users
 func listUsers(s *Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -89,6 +71,24 @@ func listUsers(s *Service) fiber.Handler {
 		resp := respJSON(msgOK, "", users).setLinks(ls).setMeta(fr)
 		return c.Status(http.StatusOK).JSON(resp)
 	}
+}
+
+func getFilter(c *fiber.Ctx) (*Filter, error) {
+	f := NewFilter(10)
+
+	err := f.SetLimit(c.QueryInt("limit"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = f.SetPage(c.QueryInt("page"))
+	if err != nil {
+		return nil, err
+	}
+
+	f.SetSort(c.Query("sort", "created_at"))
+	f.SetDirection(c.Query("direction"))
+	return f, nil
 }
 
 // findUser handler GET: /users/:id
