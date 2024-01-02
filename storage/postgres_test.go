@@ -15,12 +15,11 @@ import (
 
 // $ go test -v -tags integration -args -dbhost 127.0.0.1 -dbport 5432 -dbuser username -dbname foodb -dbpass 12345
 var (
-	dbhost   = flag.String("dbhost", "", "Database host.")
-	dbengine = flag.String("dbengine", "postgres", "Database engine, choose mysql or postgres.")
-	dbport   = flag.String("dbport", "", "Database port.")
-	dbuser   = flag.String("dbuser", "", "Database user.")
-	dbpass   = flag.String("dbpass", "", "Database password.")
-	dbname   = flag.String("dbname", "", "Database name.")
+	dbhost = flag.String("dbhost", "", "Database host.")
+	dbport = flag.String("dbport", "", "Database port.")
+	dbuser = flag.String("dbuser", "", "Database user.")
+	dbpass = flag.String("dbpass", "", "Database password.")
+	dbname = flag.String("dbname", "", "Database name.")
 )
 
 // TestDB test for open & close database.
@@ -31,7 +30,6 @@ func TestDB(t *testing.T) {
 
 func openDB(t *testing.T) *pgx.Conn {
 	dbcfg := aurora.Config{
-		EngineDB:   *dbengine,
 		HostDB:     *dbhost,
 		PortDB:     *dbport,
 		UserDB:     *dbuser,
