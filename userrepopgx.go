@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -30,7 +31,12 @@ func (r UserRepoPGX) ByID(id int) (*User, error) {
 
 	m := &User{}
 
-	err := r.conn.QueryRow(context.Background(), "SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NULL", id).Scan(&m.ID, &m.UUID, &m.Name, &m.CreatedAt, &updatedAtNull, &deletedAtNull)
+	err := r.conn.QueryRow(context.Background(), "SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NULL", id).
+		Scan(&m.ID, &m.UUID, &m.Name, &m.CreatedAt, &updatedAtNull, &deletedAtNull)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -99,4 +105,18 @@ func (r UserRepoPGX) countAll(f *Filter) (int, error) {
 	}
 
 	return n, nil
+}
+
+func (r UserRepoPGX) Delete(id int) error {
+	result, err := r.conn.Exec(context.Background(), "UPDATE users SET deleted_at = $1 WHERE id = $2", time.Now(), id)
+	if err != nil {
+		return err
+	}
+
+	rows := result.RowsAffected()
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
 }

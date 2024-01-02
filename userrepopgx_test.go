@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -47,6 +49,56 @@ func TestCreateUserPGX(t *testing.T) {
 	}
 }
 
+func TestDeleteUserPGX(t *testing.T) {
+	t.Cleanup(func() {
+		cleanUsersDataPGX(t)
+	})
+
+	conn := openPGX(t)
+	defer closePGX(t, conn)
+	insertUsersDataPGX(t, conn)
+
+	ur := UserRepoPGX{conn: conn}
+	userID := 1
+
+	if err := ur.Delete(userID); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := onlyTrashedByIDPGX(conn, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got.DeletedAt.IsZero() {
+		t.Error("expected deleted at")
+	}
+}
+
+func onlyTrashedByIDPGX(conn *pgx.Conn, id int) (*User, error) {
+	var updatedAtNull, deletedAtNull sql.NullTime
+	m := &User{}
+
+	err := conn.QueryRow(context.Background(), "SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NOT NULL", id).
+		Scan(&m.ID, &m.UUID, &m.Name, &m.CreatedAt, &updatedAtNull, &deletedAtNull)
+	if err != nil {
+		return nil, err
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	m.UpdatedAt = updatedAtNull.Time
+	m.DeletedAt = deletedAtNull.Time
+
+	return m, nil
+}
+
 func truncatePGX(conn *pgx.Conn, table string) error {
 	query := fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY", table)
 	_, err := conn.Exec(context.Background(), query)
@@ -63,6 +115,22 @@ func cleanUsersDataPGX(t *testing.T) {
 
 	err := truncatePGX(conn, "users")
 	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func insertUsersDataPGX(t *testing.T, conn *pgx.Conn) {
+	ur := UserRepoPGX{conn: conn}
+
+	if err := ur.Create(&User{
+		Name: "John",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ur.Create(&User{
+		Name: "Jane",
+	}); err != nil {
 		t.Fatal(err)
 	}
 }
