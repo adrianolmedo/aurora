@@ -1,21 +1,26 @@
-package main
+package app
+
+import (
+	domain "github.com/adrianolmedo/aurora"
+	"github.com/adrianolmedo/aurora/storage"
+)
 
 type Service struct {
 	User UserService
 }
 
-func NewService(storage *Storage) *Service {
+func NewService(storage *storage.Storage) *Service {
 	return &Service{
 		User: UserService{repo: storage.UserRepo},
 	}
 }
 
 type UserService struct {
-	repo UserRepo
+	repo storage.UserRepo
 }
 
 // SignUp to register a User.
-func (us UserService) SignUp(u *User) error {
+func (us UserService) SignUp(u *domain.User) error {
 	err := signUp(u)
 	if err != nil {
 		return err
@@ -27,7 +32,7 @@ func (us UserService) SignUp(u *User) error {
 // signUp applicaction logic for regitser a User. Has been split into
 // a smaller function for unit testing purposes, and it should do so for
 // the other methods of the Service.
-func signUp(u *User) error {
+func signUp(u *domain.User) error {
 	err := u.Validate()
 	if err != nil {
 		return err
@@ -37,14 +42,14 @@ func signUp(u *User) error {
 }
 
 // List get list of Users.
-func (usp UserService) List(f *Filter) (FilteredResults, error) {
+func (usp UserService) List(f *domain.Filter) (domain.FilteredResults, error) {
 	return usp.repo.All(f)
 }
 
 // Find a User by its ID.
-func (us UserService) Find(id int) (*User, error) {
+func (us UserService) Find(id int) (*domain.User, error) {
 	if id == 0 {
-		return &User{}, ErrUserNotFound
+		return &domain.User{}, domain.ErrUserNotFound
 	}
 
 	return us.repo.ByID(id)
@@ -53,7 +58,7 @@ func (us UserService) Find(id int) (*User, error) {
 // Remove mark User as deleted by its ID.
 func (us UserService) Remove(id int) error {
 	if id == 0 {
-		return ErrUserNotFound
+		return domain.ErrUserNotFound
 	}
 
 	return us.repo.Delete(id)

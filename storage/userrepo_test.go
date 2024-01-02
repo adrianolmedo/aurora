@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package main
+package storage
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+
+	domain "github.com/adrianolmedo/aurora"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -23,7 +25,7 @@ func TestCreateUser(t *testing.T) {
 
 	ur := UserRepo{conn: conn}
 
-	input := &User{
+	input := &domain.User{
 		Name: "Adrián",
 	}
 
@@ -75,9 +77,9 @@ func TestDeleteUser(t *testing.T) {
 	}
 }
 
-func onlyTrashedByID(conn *pgx.Conn, id int) (*User, error) {
+func onlyTrashedByID(conn *pgx.Conn, id int) (*domain.User, error) {
 	var updatedAtNull, deletedAtNull sql.NullTime
-	m := &User{}
+	m := &domain.User{}
 
 	err := conn.QueryRow(context.Background(), "SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NOT NULL", id).
 		Scan(&m.ID, &m.UUID, &m.Name, &m.CreatedAt, &updatedAtNull, &deletedAtNull)
@@ -86,7 +88,7 @@ func onlyTrashedByID(conn *pgx.Conn, id int) (*User, error) {
 	}
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, domain.ErrUserNotFound
 	}
 
 	if err != nil {
@@ -122,13 +124,13 @@ func cleanUsersData(t *testing.T) {
 func insertUsersData(t *testing.T, conn *pgx.Conn) {
 	ur := UserRepo{conn: conn}
 
-	if err := ur.Create(&User{
+	if err := ur.Create(&domain.User{
 		Name: "John",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := ur.Create(&User{
+	if err := ur.Create(&domain.User{
 		Name: "Jane",
 	}); err != nil {
 		t.Fatal(err)

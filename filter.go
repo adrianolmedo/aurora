@@ -1,4 +1,4 @@
-package main
+package aurora
 
 import (
 	"errors"

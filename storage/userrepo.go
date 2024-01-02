@@ -1,4 +1,4 @@
-package main
+package storage
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	domain "github.com/adrianolmedo/aurora"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -14,8 +15,8 @@ type UserRepo struct {
 	conn *pgx.Conn
 }
 
-func (r UserRepo) Create(u *User) error {
-	u.UUID = NextUUID()
+func (r UserRepo) Create(u *domain.User) error {
+	u.UUID = domain.NextUUID()
 	u.CreatedAt = time.Now()
 
 	err := r.conn.QueryRow(context.Background(), "INSERT INTO users (uuid, name, created_at) VALUES ($1, $2, $3) RETURNING id", u.UUID, u.Name, u.CreatedAt).Scan(&u.ID)
@@ -26,15 +27,15 @@ func (r UserRepo) Create(u *User) error {
 	return nil
 }
 
-func (r UserRepo) ByID(id int) (*User, error) {
+func (r UserRepo) ByID(id int) (*domain.User, error) {
 	var updatedAtNull, deletedAtNull sql.NullTime
 
-	m := &User{}
+	m := &domain.User{}
 
 	err := r.conn.QueryRow(context.Background(), "SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NULL", id).
 		Scan(&m.ID, &m.UUID, &m.Name, &m.CreatedAt, &updatedAtNull, &deletedAtNull)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, domain.ErrUserNotFound
 	}
 
 	if err != nil {
@@ -47,21 +48,21 @@ func (r UserRepo) ByID(id int) (*User, error) {
 	return m, nil
 }
 
-func (r UserRepo) All(f *Filter) (FilteredResults, error) {
+func (r UserRepo) All(f *domain.Filter) (domain.FilteredResults, error) {
 	query := "SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL"
 	query += " " + fmt.Sprintf("ORDER BY %s %s", f.Sort, f.Direction)
 	query += " " + limitOffset(f.Limit, f.Page)
 
 	rows, err := r.conn.Query(context.Background(), query)
 	if err != nil {
-		return FilteredResults{}, err
+		return domain.FilteredResults{}, err
 	}
 
-	users := make(Users, 0)
+	users := make(domain.Users, 0)
 
 	for rows.Next() {
 		var updatedAtNull, deletedAtNull sql.NullTime
-		m := &User{}
+		m := &domain.User{}
 
 		err := rows.Scan(
 			&m.ID,
@@ -72,7 +73,7 @@ func (r UserRepo) All(f *Filter) (FilteredResults, error) {
 			&deletedAtNull,
 		)
 		if err != nil {
-			return FilteredResults{}, err
+			return domain.FilteredResults{}, err
 		}
 
 		m.UpdatedAt = updatedAtNull.Time
@@ -82,13 +83,13 @@ func (r UserRepo) All(f *Filter) (FilteredResults, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		return FilteredResults{}, err
+		return domain.FilteredResults{}, err
 	}
 
 	// Get total rows to calculate total pages.
 	totalRows, err := r.countAll(f)
 	if err != nil {
-		return FilteredResults{}, err
+		return domain.FilteredResults{}, err
 	}
 
 	return f.Paginate(users, totalRows), nil
@@ -96,7 +97,7 @@ func (r UserRepo) All(f *Filter) (FilteredResults, error) {
 }
 
 // countAll return total of Users in storage.
-func (r UserRepo) countAll(f *Filter) (int, error) {
+func (r UserRepo) countAll(f *domain.Filter) (int, error) {
 	var n int
 
 	err := r.conn.QueryRow(context.Background(), "SELECT COUNT (*) FROM users WHERE deleted_at IS NULL").Scan(&n)
@@ -125,7 +126,7 @@ func (r UserRepo) Delete(id int) error {
 
 	rows := result.RowsAffected()
 	if rows == 0 {
-		return ErrUserNotFound
+		return domain.ErrUserNotFound
 	}
 
 	return nil

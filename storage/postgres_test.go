@@ -1,12 +1,14 @@
 //go:build integration
 // +build integration
 
-package main
+package storage
 
 import (
 	"context"
 	"flag"
 	"testing"
+
+	"github.com/adrianolmedo/aurora"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -28,7 +30,7 @@ func TestDB(t *testing.T) {
 }
 
 func openDB(t *testing.T) *pgx.Conn {
-	dbcfg := Config{
+	dbcfg := aurora.Config{
 		EngineDB:   *dbengine,
 		HostDB:     *dbhost,
 		PortDB:     *dbport,

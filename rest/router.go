@@ -1,15 +1,19 @@
-package main
+package rest
 
 import (
 	"errors"
 	"net/http"
 	"strconv"
 
+	domain "github.com/adrianolmedo/aurora"
+	"github.com/adrianolmedo/aurora/app"
+	"github.com/adrianolmedo/aurora/storage"
+
 	"github.com/gofiber/fiber/v2"
 )
 
-func router(storage *Storage) *fiber.App {
-	s := NewService(storage)
+func Router(storage *storage.Storage) *fiber.App {
+	s := app.NewService(storage)
 	f := fiber.New()
 
 	g := f.Group("/v1/users")
@@ -21,9 +25,9 @@ func router(storage *Storage) *fiber.App {
 }
 
 // signUpUser handler POST: /users
-func signUpUser(s *Service) fiber.Handler {
+func signUpUser(s *app.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		u := &User{}
+		u := &domain.User{}
 		err := c.BodyParser(u)
 		if err != nil {
 			resp := respJSON(msgError, "the JSON structure is not correct", nil)
@@ -42,7 +46,7 @@ func signUpUser(s *Service) fiber.Handler {
 }
 
 // listUsers handler GET: /users
-func listUsers(s *Service) fiber.Handler {
+func listUsers(s *app.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		f, err := getFilter(c)
 		if err != nil {
@@ -56,7 +60,7 @@ func listUsers(s *Service) fiber.Handler {
 			return c.Status(http.StatusInternalServerError).JSON(resp)
 		}
 
-		users, ok := fr.Rows.(Users)
+		users, ok := fr.Rows.(domain.Users)
 		if !ok {
 			resp := respJSON(msgError, "error in data assertion", nil)
 			return c.Status(http.StatusInternalServerError).JSON(resp)
@@ -73,8 +77,8 @@ func listUsers(s *Service) fiber.Handler {
 	}
 }
 
-func getFilter(c *fiber.Ctx) (*Filter, error) {
-	f := NewFilter(10)
+func getFilter(c *fiber.Ctx) (*domain.Filter, error) {
+	f := domain.NewFilter(10)
 
 	err := f.SetLimit(c.QueryInt("limit"))
 	if err != nil {
@@ -92,7 +96,7 @@ func getFilter(c *fiber.Ctx) (*Filter, error) {
 }
 
 // findUser handler GET: /users/:id
-func findUser(s *Service) fiber.Handler {
+func findUser(s *app.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := strconv.Atoi(c.Params("id"))
 		if id < 0 || err != nil {
@@ -101,7 +105,7 @@ func findUser(s *Service) fiber.Handler {
 		}
 
 		user, err := s.User.Find(id)
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, domain.ErrUserNotFound) {
 			resp := respJSON(msgError, err.Error(), nil)
 			return c.Status(http.StatusNotFound).JSON(resp)
 		}
@@ -117,7 +121,7 @@ func findUser(s *Service) fiber.Handler {
 }
 
 // deleteUser handler DELETE: /users/:id
-func deleteUser(s *Service) fiber.Handler {
+func deleteUser(s *app.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := strconv.Atoi(c.Params("id"))
 		if id < 0 || err != nil {
@@ -127,7 +131,7 @@ func deleteUser(s *Service) fiber.Handler {
 
 		err = s.User.Remove(id)
 
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, domain.ErrUserNotFound) {
 			resp := respJSON(msgError, err.Error(), nil)
 			return c.Status(http.StatusNoContent).JSON(resp)
 		}

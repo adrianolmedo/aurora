@@ -1,20 +1,22 @@
-package main
+package app
 
 import (
 	"strings"
 	"testing"
+
+	domain "github.com/adrianolmedo/aurora"
 )
 
 func TestSignUp(t *testing.T) {
 	tt := []struct {
 		name           string
-		input          *User
+		input          *domain.User
 		errExpected    bool
 		wantErrContain string
 	}{
 		{
 			name: "successful",
-			input: &User{
+			input: &domain.User{
 				Name: "Adrián",
 			},
 			errExpected:    false,
@@ -22,7 +24,7 @@ func TestSignUp(t *testing.T) {
 		},
 		{
 			name: "empty-field",
-			input: &User{
+			input: &domain.User{
 				Name: "",
 			},
 			errExpected:    true,
