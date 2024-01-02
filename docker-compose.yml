@@ -18,7 +18,6 @@ services:
         - USER_UID=${USER_UID}
     container_name: app
     environment:
-      - DBENGINE=${DBENGINE}
       - DBHOST=${DBHOST}
       - DBPORT=${DBPORT}
       - DBUSER=${DBUSER}
