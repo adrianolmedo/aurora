@@ -1,6 +1,5 @@
 package main
 
-// Service represents all services layers.
 type Service struct {
 	User UserService
 }
@@ -12,7 +11,7 @@ func NewService(storage *Storage) *Service {
 }
 
 type UserService struct {
-	repo UserRepository
+	repo UserRepo
 }
 
 // SignUp to register a User.
@@ -38,8 +37,8 @@ func signUp(u *User) error {
 }
 
 // List get list of Users.
-func (us UserService) List(f *Filter) (FilteredResults, error) {
-	return us.repo.All(f)
+func (usp UserService) List(f *Filter) (FilteredResults, error) {
+	return usp.repo.All(f)
 }
 
 // Find a User by its ID.

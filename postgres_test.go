@@ -4,9 +4,11 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"flag"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // $ go test -v -tags integration -args -dbhost 127.0.0.1 -dbport 5432 -dbuser username -dbname foodb -dbpass 12345
@@ -21,11 +23,11 @@ var (
 
 // TestDB test for open & close database.
 func TestDB(t *testing.T) {
-	db := openDB(t)
-	closeDB(t, db)
+	conn := openDB(t)
+	closeDB(t, conn)
 }
 
-func openDB(t *testing.T) *sql.DB {
+func openDB(t *testing.T) *pgx.Conn {
 	dbcfg := Config{
 		EngineDB:   *dbengine,
 		HostDB:     *dbhost,
@@ -35,16 +37,17 @@ func openDB(t *testing.T) *sql.DB {
 		NameDB:     *dbname,
 	}
 
-	db, err := newDB(dbcfg)
+	conn, err := newDB(dbcfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return db
+	return conn
 }
 
-func closeDB(t *testing.T, db *sql.DB) {
-	if err := db.Close(); err != nil {
+func closeDB(t *testing.T, conn *pgx.Conn) {
+	err := conn.Close(context.Background())
+	if err != nil {
 		t.Fatal(err)
 	}
 }

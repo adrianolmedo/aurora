@@ -4,10 +4,13 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -15,10 +18,10 @@ func TestCreateUser(t *testing.T) {
 		cleanUsersData(t)
 	})
 
-	db := openDB(t)
-	defer closeDB(t, db)
+	conn := openDB(t)
+	defer closeDB(t, conn)
 
-	ur := UserRepository{db: db}
+	ur := UserRepo{conn: conn}
 
 	input := &User{
 		Name: "Adrián",
@@ -51,18 +54,18 @@ func TestDeleteUser(t *testing.T) {
 		cleanUsersData(t)
 	})
 
-	db := openDB(t)
-	defer closeDB(t, db)
-	insertUsersData(t, db)
+	conn := openDB(t)
+	defer closeDB(t, conn)
+	insertUsersData(t, conn)
 
-	ur := UserRepository{db: db}
+	ur := UserRepo{conn: conn}
 	userID := 1
 
 	if err := ur.Delete(userID); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := onlyTrashedByID(db, userID)
+	got, err := onlyTrashedByID(conn, userID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,14 +75,16 @@ func TestDeleteUser(t *testing.T) {
 	}
 }
 
-func onlyTrashedByID(db *sql.DB, id int) (*User, error) {
-	stmt, err := db.Prepare("SELECT * FROM users WHERE id = $1 AND deleted_at IS NOT NULL")
+func onlyTrashedByID(conn *pgx.Conn, id int) (*User, error) {
+	var updatedAtNull, deletedAtNull sql.NullTime
+	m := &User{}
+
+	err := conn.QueryRow(context.Background(), "SELECT id, uuid, name, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NOT NULL", id).
+		Scan(&m.ID, &m.UUID, &m.Name, &m.CreatedAt, &updatedAtNull, &deletedAtNull)
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
 
-	u, err := scanRowUser(stmt.QueryRow(id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}
@@ -88,18 +93,15 @@ func onlyTrashedByID(db *sql.DB, id int) (*User, error) {
 		return nil, err
 	}
 
-	return u, nil
+	m.UpdatedAt = updatedAtNull.Time
+	m.DeletedAt = deletedAtNull.Time
+
+	return m, nil
 }
 
-func truncate(db *sql.DB, table string) error {
+func truncate(conn *pgx.Conn, table string) error {
 	query := fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY", table)
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec()
+	_, err := conn.Exec(context.Background(), query)
 	if err != nil {
 		return fmt.Errorf("can't truncate table: %v", err)
 	}
@@ -108,17 +110,17 @@ func truncate(db *sql.DB, table string) error {
 }
 
 func cleanUsersData(t *testing.T) {
-	db := openDB(t)
-	defer closeDB(t, db)
+	conn := openDB(t)
+	defer closeDB(t, conn)
 
-	err := truncate(db, "users")
+	err := truncate(conn, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func insertUsersData(t *testing.T, db *sql.DB) {
-	ur := UserRepository{db: db}
+func insertUsersData(t *testing.T, conn *pgx.Conn) {
+	ur := UserRepo{conn: conn}
 
 	if err := ur.Create(&User{
 		Name: "John",

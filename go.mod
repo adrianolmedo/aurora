@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/gofiber/fiber/v2 v2.47.0
-	github.com/lib/pq v1.10.9
 	github.com/pborman/uuid v1.2.1
 	github.com/peterbourgon/ff/v3 v3.3.2
 )
