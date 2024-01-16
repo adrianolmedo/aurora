@@ -8,6 +8,7 @@ import (
 	"time"
 
 	domain "github.com/adrianolmedo/aurora"
+
 	"github.com/jackc/pgx/v5"
 )
 
