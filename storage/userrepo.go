@@ -88,7 +88,7 @@ func (r UserRepo) All(f *domain.Filter) (domain.FilteredResults, error) {
 	}
 
 	// Get total rows to calculate total pages.
-	totalRows, err := r.countAll(f)
+	totalRows, err := r.countAll()
 	if err != nil {
 		return domain.FilteredResults{}, err
 	}
@@ -98,7 +98,7 @@ func (r UserRepo) All(f *domain.Filter) (domain.FilteredResults, error) {
 }
 
 // countAll return total of Users in storage.
-func (r UserRepo) countAll(f *domain.Filter) (int, error) {
+func (r UserRepo) countAll() (int, error) {
 	var n int
 
 	err := r.conn.QueryRow(context.Background(), "SELECT COUNT (*) FROM users WHERE deleted_at IS NULL").Scan(&n)
@@ -125,8 +125,7 @@ func (r UserRepo) Delete(id int) error {
 		return err
 	}
 
-	rows := result.RowsAffected()
-	if rows == 0 {
+	if result.RowsAffected() == 0 {
 		return domain.ErrUserNotFound
 	}
 
