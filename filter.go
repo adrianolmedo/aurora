@@ -98,7 +98,7 @@ func (f *Filter) SetDirection(direction string) {
 }
 
 // Paginate return meta data with subset of filterd results.
-func (f *Filter) Paginate(rows interface{}, totalRows int) FilteredResults {
+func (f *Filter) Paginate(rows any, totalRows int) FilteredResults {
 	totalPages := int(math.Ceil(float64(totalRows) / float64(f.Limit)))
 	if totalPages < 0 {
 		totalPages = 0
@@ -145,7 +145,7 @@ type FilteredResults struct {
 	ToRow      int    `json:"to_row"`
 
 	// Rows subset of results, not all of results.
-	Rows interface{} `json:"-"`
+	Rows any `json:"-"`
 }
 
 // GenLinksResp generate links field to JSON reponse.
